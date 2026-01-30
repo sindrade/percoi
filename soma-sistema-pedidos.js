@@ -1,64 +1,60 @@
 (function() {
-    // 1. Buscamos todos os spans da página
-    const todosOsSpans = document.querySelectorAll('span');
+    // 1. Localiza todos os spans que seguem o padrão de caminho fornecido
+    // O seletor abaixo busca spans dentro da estrutura específica do seu sistema
+    const elementos = document.querySelectorAll('div[div] main div div div div div div a div div span');
     
+    // Como o XPath é muito específico, vamos usar uma abordagem mais segura via XPath generalizado:
+    const xpathExpression = "//div[contains(@class, 'main')]//div//span[contains(text(), ',')]";
+    const result = document.evaluate("/html/body/div[1]/div[2]/main/div/div[4]/div/div/div/div[1]/div/a/div[1]/div[4]/span", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+
     let somaTotal = 0;
     let itensEncontrados = 0;
 
-    todosOsSpans.forEach(span => {
-        // Verifica se o texto do span contém a palavra "Total" (ignorando maiúsculas/minúsculas)
-        if (span.innerText.toUpperCase().includes('TOTAL')) {
-            
-            // Tentativa de pegar o valor: 
-            // Algumas vezes o valor está no mesmo span, outras no span vizinho (nextElementSibling)
-            let textoValor = span.innerText;
-            
-            // Se o span do "Total" estiver vazio ou sem números, tentamos o próximo elemento
-            if (!/\d/.test(textoValor) && span.nextElementSibling) {
-                textoValor = span.nextElementSibling.innerText;
-            }
+    // Iterar por todos os elementos encontrados (usando a lógica de lista do seu sistema)
+    // Vamos pegar o container pai para garantir que pegamos todos os itens da lista
+    const todosOsValores = document.querySelectorAll('main div div div div div a div div:nth-child(4) span');
 
-            // Limpeza: remove tudo que não é número ou vírgula, e troca vírgula por ponto
-            let valorLimpo = textoValor.replace(/[^\d,]/g, '').replace(',', '.');
-            let valorNumerico = parseFloat(valorLimpo);
+    todosOsValores.forEach(el => {
+        // Limpa o texto (remove R$, espaços e ajusta a vírgula para ponto)
+        let texto = el.innerText.replace(/[^\d,]/g, '').replace(',', '.');
+        let valor = parseFloat(texto);
 
-            if (!isNaN(valorNumerico)) {
-                somaTotal += valorNumerico;
-                itensEncontrados++;
-            }
+        if (!isNaN(valor)) {
+            somaTotal += valor;
+            itensEncontrados++;
         }
     });
 
-    // 2. Criar/Atualizar o balão visual
-    let display = document.getElementById('balao-faturamento-total');
-    if (!display) {
-        display = document.createElement('div');
-        display.id = 'balao-faturamento-total';
-        document.body.appendChild(display);
-    }
+    // 2. Criar o "balão flutuante" visual
+    const display = document.createElement('div');
+    display.id = 'meu-faturamento-flutuante';
+    display.innerHTML = `
+        <div style="font-weight: bold; font-size: 12px; margin-bottom: 5px;">Faturamento Total</div>
+        <div style="font-size: 18px; color: #2ecc71;">R$ ${somaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+        <div style="font-size: 10px; margin-top: 5px; opacity: 0.8;">${itensEncontrados} pedidos somados</div>
+    `;
 
-    // Estilização (mantendo o estilo moderno)
+    // 3. Estilização do balão
     Object.assign(display.style, {
         position: 'fixed',
         bottom: '20px',
         right: '20px',
-        backgroundColor: '#1e272e',
-        color: '#00d8d6',
-        padding: '15px 25px',
-        borderRadius: '10px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
-        zIndex: '10000',
-        fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-        borderLeft: '5px solid #05c46b'
+        backgroundColor: '#2c3e50',
+        color: 'white',
+        padding: '15px',
+        borderRadius: '12px',
+        boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
+        zIndex: '9999',
+        fontFamily: 'sans-serif',
+        textAlign: 'center',
+        border: '2px solid #34495e'
     });
 
-    display.innerHTML = `
-        <div style="color: #d2dae2; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Soma de Totais</div>
-        <div style="font-size: 22px; font-weight: bold; margin-top: 3px;">
-            R$ ${somaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-        </div>
-        <div style="color: #808e9b; font-size: 10px; margin-top: 5px;">${itensEncontrados} ocorrências de "Total" encontradas</div>
-    `;
+    // Remove balão anterior se existir
+    const anterior = document.getElementById('meu-faturamento-flutuante');
+    if (anterior) anterior.remove();
 
-    console.log(`Faturamento extraído com base na palavra 'Total': R$ ${somaTotal.toFixed(2)}`);
+    document.body.appendChild(display);
+
+    console.log(`Soma concluída: R$ ${somaTotal.toFixed(2)} em ${itensEncontrados} itens.`);
 })();
