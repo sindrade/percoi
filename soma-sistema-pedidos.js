@@ -1,64 +1,79 @@
 (function() {
-    // 1. Buscamos todos os spans da página
-    const todosOsSpans = document.querySelectorAll('span');
-    
-    let somaTotal = 0;
-    let itensEncontrados = 0;
+    // Função principal de cálculo
+    function calcularFaturamento() {
+        const todosOsSpans = document.querySelectorAll('span');
+        let somaTotal = 0;
+        let itensEncontrados = 0;
 
-    todosOsSpans.forEach(span => {
-        // Verifica se o texto do span contém a palavra "Total" (ignorando maiúsculas/minúsculas)
-        if (span.innerText.toUpperCase().includes('TOTAL')) {
-            
-            // Tentativa de pegar o valor: 
-            // Algumas vezes o valor está no mesmo span, outras no span vizinho (nextElementSibling)
-            let textoValor = span.innerText;
-            
-            // Se o span do "Total" estiver vazio ou sem números, tentamos o próximo elemento
-            if (!/\d/.test(textoValor) && span.nextElementSibling) {
-                textoValor = span.nextElementSibling.innerText;
+        todosOsSpans.forEach(span => {
+            // Filtro por texto "Total" para evitar pegar IDs ou Quantidades
+            if (span.innerText.toUpperCase().includes('TOTAL')) {
+                let textoValor = span.innerText;
+                
+                // Se o span do "Total" não tiver números, tenta o próximo elemento (comum em tabelas)
+                if (!/\d/.test(textoValor) && span.nextElementSibling) {
+                    textoValor = span.nextElementSibling.innerText;
+                }
+
+                // Limpeza de caracteres: remove R$, espaços e converte vírgula para ponto
+                let valorLimpo = textoValor.replace(/[^\d,]/g, '').replace(',', '.');
+                let valorNumerico = parseFloat(valorLimpo);
+
+                if (!isNaN(valorNumerico)) {
+                    somaTotal += valorNumerico;
+                    itensEncontrados++;
+                }
             }
+        });
 
-            // Limpeza: remove tudo que não é número ou vírgula, e troca vírgula por ponto
-            let valorLimpo = textoValor.replace(/[^\d,]/g, '').replace(',', '.');
-            let valorNumerico = parseFloat(valorLimpo);
-
-            if (!isNaN(valorNumerico)) {
-                somaTotal += valorNumerico;
-                itensEncontrados++;
-            }
-        }
-    });
-
-    // 2. Criar/Atualizar o balão visual
-    let display = document.getElementById('balao-faturamento-total');
-    if (!display) {
-        display = document.createElement('div');
-        display.id = 'balao-faturamento-total';
-        document.body.appendChild(display);
+        exibirNoBalao(somaTotal, itensEncontrados);
     }
 
-    // Estilização (mantendo o estilo moderno)
-    Object.assign(display.style, {
-        position: 'fixed',
-        bottom: '20px',
-        right: '20px',
-        backgroundColor: '#1e272e',
-        color: '#00d8d6',
-        padding: '15px 25px',
-        borderRadius: '10px',
-        boxShadow: '0 10px 25px rgba(0,0,0,0.4)',
-        zIndex: '10000',
-        fontFamily: 'Segoe UI, Tahoma, Geneva, Verdana, sans-serif',
-        borderLeft: '5px solid #05c46b'
+    // Função para criar ou atualizar a interface visual
+    function exibirNoBalao(valor, qtd) {
+        let display = document.getElementById('percoi-faturamento-float');
+        
+        if (!display) {
+            display = document.createElement('div');
+            display.id = 'percoi-faturamento-float';
+            document.body.appendChild(display);
+            
+            // Estilização com a identidade visual da Percói (Escuro com destaque verde)
+            Object.assign(display.style, {
+                position: 'fixed',
+                bottom: '20px',
+                right: '20px',
+                backgroundColor: '#1e272e',
+                color: '#ffffff',
+                padding: '12px 20px',
+                borderRadius: '8px',
+                boxShadow: '0 8px 20px rgba(0,0,0,0.5)',
+                zIndex: '99999',
+                fontFamily: 'sans-serif',
+                borderLeft: '4px solid #05c46b'
+            });
+        }
+
+        display.innerHTML = `
+            <div style="font-size: 10px; color: #808e9b; text-transform: uppercase; font-weight: bold;">Faturamento Percói</div>
+            <div style="font-size: 20px; color: #05c46b; font-weight: bold;">R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+            <div style="font-size: 10px; color: #d2dae2;">${qtd} pedidos na tela</div>
+        `;
+    }
+
+    // --- AUTOMAÇÃO INTELIGENTE ---
+    
+    // 1. Executa assim que o script carregar
+    calcularFaturamento();
+
+    // 2. Observa mudanças na página (se o usuário filtrar ou carregar mais pedidos)
+    const observer = new MutationObserver(() => {
+        // Usamos um pequeno delay para não sobrecarregar o processador
+        clearTimeout(window.percoiTimer);
+        window.percoiTimer = setTimeout(calcularFaturamento, 1000);
     });
 
-    display.innerHTML = `
-        <div style="color: #d2dae2; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">Soma de Totais</div>
-        <div style="font-size: 22px; font-weight: bold; margin-top: 3px;">
-            R$ ${somaTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-        </div>
-        <div style="color: #808e9b; font-size: 10px; margin-top: 5px;">${itensEncontrados} ocorrências de "Total" encontradas</div>
-    `;
+    observer.observe(document.body, { childList: true, subtree: true });
 
-    console.log(`Faturamento extraído com base na palavra 'Total': R$ ${somaTotal.toFixed(2)}`);
+    console.log("Percói: Monitor de faturamento ativo.");
 })();
